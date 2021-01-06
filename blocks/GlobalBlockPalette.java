@@ -44,7 +44,7 @@ public class GlobalBlockPalette {
         JSONObject jsonObject=new JSONObject();
         int count=0;
         for (CompoundTag state : tag.getAll()) {
-            String mcbeStringBlockName = state.getCompound("block").getString("name");
+            String mcbeStringBlockName = state.getCompound("block").getString("name").split(":")[1];
             CompoundTag blockStates = state.getCompound("block").getCompound("states");
             if(blockStates.getAllTags().size()>0){
                 ArrayList<String> runtimeArr=new ArrayList<>();
@@ -89,13 +89,20 @@ public class GlobalBlockPalette {
             throw new AssertionError("Unable to write block palette", e);
         }
         JSONArray blocksJSON=new JSONArray();
+        ArrayList<String> existsBlocksCache=new ArrayList<>();
         for(int i=0;i<=255;i++){
             int meta=0;
             int runtimeId;
             while ((runtimeId=legacyToRuntimeId.get(i << 6 | meta))!=-1){
+                String name=jsonObject.getString(runtimeId+"");
+                if(existsBlocksCache.contains(name)){
+                    meta++;
+                    continue;
+                }
+                existsBlocksCache.add(name);
                 JSONObject obj=new JSONObject();
                 Block block=Block.get(i,meta);
-                obj.put("name",jsonObject.getString(runtimeId+""));
+                obj.put("name",name);
                 obj.put("id",i);
                 obj.put("meta",meta);
                 obj.put("light",block.getLightLevel());
