@@ -94,9 +94,11 @@ public class GlobalBlockPalette {
             int runtimeId;
             while ((runtimeId=legacyToRuntimeId.get(i << 6 | meta))!=-1){
                 JSONObject obj=new JSONObject();
+                Block block=Block.get(i,meta);
                 obj.put("name",jsonObject.getString(runtimeId+""));
                 obj.put("id",i);
                 obj.put("meta",meta);
+                obj.put("light",block.getLightLevel());
                 meta++;
                 blocksJSON.add(obj);
             }
