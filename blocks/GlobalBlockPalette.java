@@ -105,7 +105,9 @@ public class GlobalBlockPalette {
                 obj.put("name",name);
                 obj.put("id",i);
                 obj.put("meta",meta);
-                obj.put("light",block.getLightLevel());
+                if(block.getLightLevel()!=0) {
+                    obj.put("light", block.getLightLevel());
+                }
                 meta++;
                 blocksJSON.add(obj);
             }
