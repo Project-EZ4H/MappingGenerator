@@ -41,31 +41,7 @@ public class GlobalBlockPalette {
         } catch (IOException e) {
             throw new AssertionError("Unable to load block palette", e);
         }
-        JSONObject jsonObject=new JSONObject();
-        int count=0;
-        for (CompoundTag state : tag.getAll()) {
-            String mcbeStringBlockName = state.getCompound("block").getString("name").split(":")[1];
-            CompoundTag blockStates = state.getCompound("block").getCompound("states");
-            if(blockStates.getAllTags().size()>0){
-                ArrayList<String> runtimeArr=new ArrayList<>();
-                for (Tag e : blockStates.getAllTags()) {
-                    runtimeArr.add(e.getName());
-                }
-                Collections.sort(runtimeArr);
-                mcbeStringBlockName+="[";
-                for(String tagName:runtimeArr){
-                    mcbeStringBlockName+=tagName;
-                    mcbeStringBlockName+="=";
-                    mcbeStringBlockName+=blockStates.get(tagName).parseValue();
-                    mcbeStringBlockName+=",";
-                }
-                mcbeStringBlockName=mcbeStringBlockName.substring(0,mcbeStringBlockName.length()-1);
-                mcbeStringBlockName+="]";
-            }
-            jsonObject.put(count+"",mcbeStringBlockName);
-            count++;
-        }
-        writeFile("./block_runtime.json",jsonObject.toJSONString());
+
         for (CompoundTag state : tag.getAll()) {
             int runtimeId = runtimeIdAllocator.getAndIncrement();
             if (!state.contains("LegacyStates")) continue;
@@ -88,6 +64,42 @@ public class GlobalBlockPalette {
         } catch (IOException e) {
             throw new AssertionError("Unable to write block palette", e);
         }
+
+        Map<Integer,Integer> realIdMap=new HashMap<>();
+        //dropper and wooden_slab
+        realIdMap.put(158,126);
+        realIdMap.put(126,158);
+        //activator_rail and double_wooden_slab
+        realIdMap.put(125,157);
+        realIdMap.put(157,125);
+
+        Map<String,Integer> runtimeTempMap=new HashMap<>();
+        JSONObject jsonObject=new JSONObject();
+        int count=0;
+        for (CompoundTag state : tag.getAll()) {
+            String mcbeStringBlockName = state.getCompound("block").getString("name").split(":")[1];
+            CompoundTag blockStates = state.getCompound("block").getCompound("states");
+            if(blockStates.getAllTags().size()>0){
+                ArrayList<String> runtimeArr=new ArrayList<>();
+                for (Tag e : blockStates.getAllTags()) {
+                    runtimeArr.add(e.getName());
+                }
+                Collections.sort(runtimeArr);
+                mcbeStringBlockName+="[";
+                for(String tagName:runtimeArr){
+                    mcbeStringBlockName+=tagName;
+                    mcbeStringBlockName+="=";
+                    mcbeStringBlockName+=blockStates.get(tagName).parseValue();
+                    mcbeStringBlockName+=",";
+                }
+                mcbeStringBlockName=mcbeStringBlockName.substring(0,mcbeStringBlockName.length()-1);
+                mcbeStringBlockName+="]";
+            }
+            jsonObject.put(count+"",mcbeStringBlockName);
+            runtimeTempMap.put(mcbeStringBlockName,count);
+            count++;
+        }
+
         JSONArray blocksJSON=new JSONArray();
         ArrayList<String> existsBlocksCache=new ArrayList<>();
         for(int i=0;i<=255;i++){
@@ -103,7 +115,11 @@ public class GlobalBlockPalette {
                 JSONObject obj=new JSONObject();
                 Block block=Block.get(i,meta);
                 obj.put("name",name);
-                obj.put("id",i);
+                Integer realId=realIdMap.get(i);
+                if(realId==null){
+                    realId=i;
+                }
+                obj.put("id",realId);
                 obj.put("meta",meta);
                 if(block.getLightLevel()!=0) {
                     obj.put("light", block.getLightLevel());
@@ -113,7 +129,13 @@ public class GlobalBlockPalette {
             }
         }
         writeFile("./blocks.json",blocksJSON.toJSONString());
+
+        //grass_path and end_rod[facing_direction=0]
+        jsonObject.put(runtimeTempMap.get("end_rod[facing_direction=0]")+"","grass_path");
+        jsonObject.put(runtimeTempMap.get("grass_path")+"","end_rod[facing_direction=0]");
+        writeFile("./block_runtime.json",jsonObject.toJSONString());
     }
+
     public static void writeFile(String path,String text) {
         try {
             Writer writer=new BufferedWriter(new OutputStreamWriter(new FileOutputStream(path), StandardCharsets.UTF_8));
@@ -123,6 +145,7 @@ public class GlobalBlockPalette {
             e.printStackTrace();
         }
     }
+    
     public static int getOrCreateRuntimeId(int id, int meta) {
         int legacyId = id << 6 | meta;
         int runtimeId = legacyToRuntimeId.get(legacyId);
